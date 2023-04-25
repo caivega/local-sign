@@ -1,9 +1,12 @@
 // reference from npmjs.org@google-protobuf/google-protobuf.js
-var goog={asserts:{},crypt:{}};
+var goog={asserts:{},crypt:{},array:{}};
 goog.typeOf = function(a) {
     return (typeof a);
 };
-goog.array.slice=function(a,b,c){/*goog.asserts.assert(null!=a.length);*/return 2>=arguments.length?Array.prototype.slice.call(a,b):Array.prototype.slice.call(a,b,c)};
+goog.asserts.assert = function(a) {
+    if(!a) throw new Error(a + " should be true");
+};
+goog.array.slice=function(a,b,c){goog.asserts.assert(null!=a.length);return 2>=arguments.length?Array.prototype.slice.call(a,b):Array.prototype.slice.call(a,b,c)};
 goog.crypt.byteArrayToString=function(a){if(8192>=a.length)return String.fromCharCode.apply(null,a);for(var b="",c=0;c<a.length;c+=8192){var d=goog.array.slice(a,c,c+8192);b+=String.fromCharCode.apply(null,d)}return b};
 
 var jspb={asserts:{}};
