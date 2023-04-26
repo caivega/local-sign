@@ -22,6 +22,17 @@ function Client(url) {
                 ]
             }, callback);
         },
+        get_account(address, callback) {
+            this.post({
+                method:"getStateByAddress",
+                params:[
+                    {
+                        type: "AccountState", 
+                        address: address
+                    }
+                ]
+            }, callback);
+        },
         get_transaction_count(address, callback) {
             this.post({
                 method:"getTransactionCount",

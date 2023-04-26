@@ -2,7 +2,7 @@ import jspb from './util';
 import proto from './proto';
 import Client from './client';
 
-import init, { sign_transaction } from 'wasm-lib';
+import init, { sign_transaction, generate_account } from 'wasm-lib';
 
 const CORE_DATA_STRING = 62;
 const CORE_DATA_BYTES  = 63;
@@ -11,6 +11,7 @@ const CORE_DATA_LIST = 64;
 const CORE_DATA_MAP  = 65;
 
 var wasm_lib_initialized = false;
+getWasm();
 
 function getString(s) {
     var w = new jspb.BinaryEncoder();
@@ -126,18 +127,38 @@ function bytesToHex(bytes) {
     return hex.join("");
 }
 
-function getWasmSigner() {
+function getWasm() {
     if(!wasm_lib_initialized){
         init().then(() => {
             wasm_lib_initialized = true;
         });
     }
+}
+
+function getWasmSigner() {
+    getWasm();
     return sign_transaction;
+}
+
+function getWasmGenerator() {
+    getWasm();
+    return generate_account;
 }
 
 export default {
     new: function(url) {
         return new Client(url);
+    },
+    generate: function(passphrase) {
+        var generator = getWasmGenerator();
+        var ret = generator(passphrase);
+        var list = ret.split(",");
+        return {
+            type:list[0],
+            address:list[1],
+            private:list[2],
+            public:list[3]
+        };
     },
     sign: function(tx) {
         var signer = getWasmSigner();
