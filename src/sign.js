@@ -2,7 +2,10 @@ import jspb from './util';
 import proto from './proto';
 import Client from './client';
 
-import init, { sign_transaction, generate_account } from 'wasm-lib';
+import init, { sign_transaction, generate_account, generate_key, generate_nonce, encrypt_data, decrypt_data, encrypt, decrypt } from 'wasm-client';
+
+const stringEncoder = new TextEncoder('utf-8');
+const stringDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 
 const CORE_DATA_STRING = 62;
 const CORE_DATA_BYTES  = 63;
@@ -53,6 +56,10 @@ function getPayload(payload) {
         }
         if(payload.contract != null){
             var cm = new proto.pb.DataMap();
+            var account = payload.contract.account;
+            if(account && account.length > 0){
+                cm.getMapMap().set("account", getString(account));
+            }
             var method = payload.contract.method;
             if(method && method.length > 0){
                 cm.getMapMap().set("method", getString(method));
@@ -84,6 +91,29 @@ function getPayload(payload) {
             }
             ret.getMapMap().set("page", getMap(cm));
         }
+        if(payload.user != null){
+            var cm = new proto.pb.DataMap();
+            var s = payload.user.data;
+            if(s && s.length > 0){
+                cm.getMapMap().set("data", getString(s));
+
+                var a = payload.user.account;
+                if(a && a.length > 0){
+                    cm.getMapMap().set("account", getString(a));
+                }
+
+                var k = payload.user.key;
+                if(k && k.length > 0){
+                    cm.getMapMap().set("key", getString(k));
+                }
+
+                var n = payload.user.nonce;
+                if(n && n.length > 0){
+                    cm.getMapMap().set("nonce", getString(n));
+                }
+            }
+            ret.getMapMap().set("user", getMap(cm));
+        }
     }else{
         ret = null;
     }
@@ -95,7 +125,6 @@ function getTransaction(tx) {
     var secret = tx.secret;
     var sequence = tx.sequence;
     var to = tx.to;
-    var value = tx.value;
     var gas = tx.gas;
     var payload = getPayload(tx.payload);
     
@@ -103,7 +132,6 @@ function getTransaction(tx) {
     m.getMapMap().set("from", getString(from));
     m.getMapMap().set("secret", getString(secret));
     m.getMapMap().set("to", getString(to));
-    m.getMapMap().set("value", getString(value));
     m.getMapMap().set("gas", getString(gas));
     m.getMapMap().set("sequence", getString(sequence));
     if(payload != null){
@@ -115,7 +143,7 @@ function getTransaction(tx) {
     w.writeUint8(CORE_DATA_MAP);
     w.writeBytes(bs);
     var blob = bytesToHex(w.getBytes());
-    console.log(blob);
+    console.log("tx", blob);
     return blob;
 }
 
@@ -125,6 +153,12 @@ function bytesToHex(bytes) {
         hex.push((bytes[i] & 0xF).toString(16));
     }
     return hex.join("");
+}
+
+function hexToBytes(hex) {
+    return new Uint8Array(hex.match(/[\da-fA-F]{2}/gi).map(function (h) {
+        return parseInt(h, 16)
+    }));
 }
 
 function getWasm() {
@@ -149,6 +183,18 @@ export default {
     new: function(url) {
         return new Client(url);
     },
+    bytes_to_hex(bs){
+        return bytesToHex(bs);
+    },
+    hex_to_bytes(hex){
+        return hexToBytes(hex);
+    },
+    get_string(bs){
+        return stringDecoder.decode(bs);
+    },
+    get_bytes(s){
+        return stringEncoder.encode(s);
+    },
     generate: function(passphrase) {
         var generator = getWasmGenerator();
         var ret = generator(passphrase);
@@ -164,5 +210,28 @@ export default {
         var signer = getWasmSigner();
         var txBlob = getTransaction(tx);
         return signer(txBlob);
+    },
+    load_file: function(f, callback) {
+        var fr = new FileReader();
+        fr.onloadend = function (e) {
+            var data = e.target.result;
+            var bytes = new Uint8Array(data);
+            callback(bytes);
+        };
+        fr.readAsArrayBuffer(f);
+    },
+    encrypt_user_data(account, contract, hex) {
+        getWasm();
+        var key = generate_key();
+        var nonce = generate_nonce();
+        var encrypted_key = encrypt(account.public, key);
+        var encrypted_nonce = encrypt(account.public, nonce);
+        var encrypted_hex = encrypt_data(key, nonce, hex);
+        return {
+            account: contract,
+            key: encrypted_key,
+            nonce: encrypted_nonce,
+            data: encrypted_hex
+        };
     }
 };
