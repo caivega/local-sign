@@ -2,7 +2,7 @@ import jspb from './util';
 import proto from './proto';
 import Client from './client';
 
-import init, { sign_transaction, generate_account, generate_key, generate_nonce, encrypt_data, decrypt_data, encrypt, decrypt } from 'wasm-client';
+import init, { sign_transaction, generate_account, generate_key, generate_nonce, encrypt_data, decrypt_data, encrypt, decrypt, encode_user_info, decode_user_info } from 'wasm-client';
 
 const stringEncoder = new TextEncoder('utf-8');
 const stringDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
@@ -92,32 +92,41 @@ function getPayload(payload) {
             ret.getMapMap().set("page", getMap(cm));
         }
         if(payload.user != null){
-            var cm = new proto.pb.DataMap();
-            var s = payload.user.data;
-            if(s && s.length > 0){
-                cm.getMapMap().set("data", getString(s));
-
-                var a = payload.user.account;
-                if(a && a.length > 0){
-                    cm.getMapMap().set("account", getString(a));
-                }
-
-                var k = payload.user.key;
-                if(k && k.length > 0){
-                    cm.getMapMap().set("key", getString(k));
-                }
-
-                var n = payload.user.nonce;
-                if(n && n.length > 0){
-                    cm.getMapMap().set("nonce", getString(n));
-                }
-            }
+            var cm = get_user_info(payload.user, true);
             ret.getMapMap().set("user", getMap(cm));
         }
     }else{
         ret = null;
     }
     return ret;
+}
+
+function get_user_info(user, has_data) {
+    var cm = new proto.pb.DataMap();
+    if(has_data){
+        var s = user.data;
+        if(s && s.length > 0){
+            cm.getMapMap().set("data", getString(s));
+        }
+    }else{
+        var s = user.hash;
+        if(s && s.length > 0){
+            cm.getMapMap().set("hash", getString(s));
+        }
+    }
+    var a = user.account;
+    if(a && a.length > 0){
+        cm.getMapMap().set("account", getString(a));
+    }
+    var k = user.key;
+    if(k && k.length > 0){
+        cm.getMapMap().set("key", getString(k));
+    }
+    var n = user.nonce;
+    if(n && n.length > 0){
+        cm.getMapMap().set("nonce", getString(n));
+    }
+    return cm;
 }
 
 function getTransaction(tx) {
@@ -220,6 +229,20 @@ export default {
         };
         fr.readAsArrayBuffer(f);
     },
+    download_file: function(name, data) {
+        var blob = new Blob([data], {type: "application/octet-stream"});
+        console.log(blob);
+        const reader = new FileReader();
+        reader.readAsDataURL(blob)
+        reader.onload = (e) => {
+            const a = document.createElement('a')
+            a.download = name;
+            a.href = e.target.result;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+    },
     encrypt_user_data(account, contract, hex) {
         getWasm();
         var key = generate_key();
@@ -233,5 +256,42 @@ export default {
             nonce: encrypted_nonce,
             data: encrypted_hex
         };
+    },
+    decrypt_user_data(account, user_info, hex) {
+        var key = decrypt(account.private, user_info.key);
+        var nonce = decrypt(account.private, user_info.nonce);
+        var decrypted_hex = decrypt_data(key, nonce, hex);
+        return decrypted_hex;
+    },
+    decode_user_data(hex) {
+        var ret = decode_user_info(hex);
+        var list = ret.split(",");
+        console.log(hex, list);
+        return {
+            account: list[0],
+            key: list[1],
+            nonce: list[2],
+            hash: list[3]
+        };
+    },
+    transfer_user_data(account, peer_pk, user_info) {
+        getWasm();
+        
+        var key = decrypt(account.private, user_info.key);
+        var nonce = decrypt(account.private, user_info.nonce);
+
+        var encrypted_key = encrypt(peer_pk, key);
+        var encrypted_nonce = encrypt(peer_pk, nonce);
+
+        var m = get_user_info({
+            account: account.address,
+            key:encrypted_key,
+            nonce:encrypted_nonce,
+            hash:user_info.hash
+        }, false);
+        var cm = getMap(m);
+        var bs = cm.getBytes();
+        var hex = this.bytes_to_hex(bs);
+        return encode_user_info(hex);
     }
 };
