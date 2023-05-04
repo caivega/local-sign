@@ -225,7 +225,11 @@ export default {
         fr.onloadend = function (e) {
             var data = e.target.result;
             var bytes = new Uint8Array(data);
-            callback(bytes);
+            callback(bytes, {
+                name: f.name,
+                size: f.size,
+                type: f.type
+            });
         };
         fr.readAsArrayBuffer(f);
     },
