@@ -246,9 +246,8 @@ export default {
         };
         fr.readAsArrayBuffer(f);
     },
-    download_file: function(name, data) {
-        var blob = new Blob([data], {type: "application/octet-stream"});
-        console.log(blob);
+    download_file: function(name, type, data) {
+        var blob = new Blob([data], {type: type && "application/octet-stream"});
         const reader = new FileReader();
         reader.readAsDataURL(blob)
         reader.onload = (e) => {
@@ -259,6 +258,11 @@ export default {
             a.click();
             document.body.removeChild(a);
         };
+    },
+    view_file: function(name, type, data) {
+        var blob = new Blob([data], {type: type});
+        var fileURL = URL.createObjectURL(blob);
+        window.open(fileURL);
     },
     encrypt_user_data(account, contract, hex) {
         getWasm();
@@ -288,7 +292,6 @@ export default {
 
         var ret = decode_user_info(hex);
         var list = ret.split(",");
-        console.log(hex, list);
         return {
             account: list[0],
             key: list[1],
