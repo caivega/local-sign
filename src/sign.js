@@ -2,7 +2,20 @@ import jspb from './util';
 import proto from './proto';
 import Client from './client';
 
-import init, { sign_transaction, generate_account, generate_key, generate_nonce, encrypt_data, decrypt_data, encrypt, decrypt, encode_user_info, decode_user_info } from 'wasm-client';
+import init, { 
+    sign_transaction, 
+    generate_account, 
+    generate_key, 
+    generate_nonce, 
+    encrypt_data, 
+    decrypt_data, 
+    encrypt, 
+    decrypt, 
+    encode_user_info, 
+    decode_user_info,
+    encode_public_key,
+    decode_public_key
+} from 'wasm-client';
 
 const stringEncoder = new TextEncoder('utf-8');
 const stringDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
@@ -249,6 +262,7 @@ export default {
     },
     encrypt_user_data(account, contract, hex) {
         getWasm();
+
         var key = generate_key();
         var nonce = generate_nonce();
         var encrypted_key = encrypt(account.public, key);
@@ -262,12 +276,16 @@ export default {
         };
     },
     decrypt_user_data(account, user_info, hex) {
+        getWasm();
+
         var key = decrypt(account.private, user_info.key);
         var nonce = decrypt(account.private, user_info.nonce);
         var decrypted_hex = decrypt_data(key, nonce, hex);
         return decrypted_hex;
     },
     decode_user_data(hex) {
+        getWasm();
+
         var ret = decode_user_info(hex);
         var list = ret.split(",");
         console.log(hex, list);
@@ -277,6 +295,16 @@ export default {
             nonce: list[2],
             hash: list[3]
         };
+    },
+    encode_public_key(hex) {
+        getWasm();
+
+        return encode_public_key(hex);
+    },
+    decode_public_key(hex) {
+        getWasm();
+
+        return decode_public_key(hex);
     },
     transfer_user_data(account, peer_pk, user_info) {
         getWasm();
