@@ -5,6 +5,7 @@ import Client from './client';
 import init, { 
     sign_transaction, 
     generate_account, 
+    import_account,
     generate_key, 
     generate_nonce, 
     encrypt_data, 
@@ -220,6 +221,18 @@ export default {
     generate: function(passphrase) {
         var generator = getWasmGenerator();
         var ret = generator(passphrase);
+        var list = ret.split(",");
+        return {
+            type:list[0],
+            address:list[1],
+            private:list[2],
+            public:list[3]
+        };
+    },
+    import: function(secret) {
+        getWasm()
+
+        var ret = import_account(secret);
         var list = ret.split(",");
         return {
             type:list[0],

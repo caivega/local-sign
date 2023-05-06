@@ -13,8 +13,7 @@ function Client(url) {
             .then(function (response) {
                 console.log(response.data);
                 callback && callback(response.data);
-            })
-            .catch(function (error) {
+            }).catch(function (error) {
                 console.log(error);
                 callback && callback(error);
             });
