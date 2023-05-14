@@ -1,14 +1,23 @@
 import axios from 'axios';
 
-function Client(url) {
-    console.log(url);
+function Client(url, root) {
+    console.log(url, root);
     return {
         id:0,
         url: url,
+        root:root,
         post: function(data, callback) {
             data.id = this.id ++;
-
-            console.log(data.id, data.method);
+            if(this.root != null){
+                if (data.params.length > 0) {
+                    for(var i in data.params) {
+                        data.params[i].root = this.root;
+                    }
+                }else{
+                    data.params = [{root:this.root}]
+                }
+            }
+            console.log(data.id, data.method, data.params);
             axios.post(this.url, data)
             .then(function (response) {
                 console.log(response.data);
@@ -18,12 +27,38 @@ function Client(url) {
                 callback && callback(error);
             });
         },
+        block_number(callback) {
+            this.post({
+                method:"blockNumber",
+                params:[]
+            }, callback);
+        },
         get_balance(address, callback) {
             this.post({
                 method:"getBalance",
                 params:[
                     {
                         address
+                    }
+                ]
+            }, callback);
+        },
+        get_meta(symbol, callback) {
+            this.post({
+                method:"getMeta",
+                params:[
+                    {
+                        symbol
+                    }
+                ]
+            }, callback);
+        },
+        get_block_by_number(num, callback){
+            this.post({
+                method:"getBlockByNumber",
+                params:[
+                    {
+                        num
                     }
                 ]
             }, callback);

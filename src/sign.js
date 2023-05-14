@@ -2,6 +2,10 @@ import jspb from './util';
 import proto from './proto';
 import Client from './client';
 
+// import jspb from 'google-protobuf';
+// goog.object.extend(exports, proto.pb);
+// export default proto;
+
 import init, { 
     sign_transaction, 
     generate_account, 
@@ -21,6 +25,8 @@ import init, {
 const stringEncoder = new TextEncoder('utf-8');
 const stringDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 
+const CORE_DATA_INT64 = 55;
+
 const CORE_DATA_STRING = 62;
 const CORE_DATA_BYTES  = 63;
 
@@ -29,6 +35,15 @@ const CORE_DATA_MAP  = 65;
 
 var wasm_lib_initialized = false;
 getWasm();
+
+function getInt64(n) {
+    var w = new jspb.BinaryEncoder();
+    w.writeUint8(CORE_DATA_INT64);
+    w.writeInt64(n);
+    var d = new proto.pb.Data();
+    d.setBytes(w.getBytes());
+    return d;
+}
 
 function getString(s) {
     var w = new jspb.BinaryEncoder();
@@ -51,6 +66,33 @@ function getMap(m) {
     return d;
 }
 
+function getList(list) {
+    var list_bytes = list.serializeBinary();
+
+    var w = new jspb.BinaryEncoder();
+    w.writeUint8(CORE_DATA_LIST);
+    w.writeBytes(list_bytes);
+    
+    var d = new proto.pb.Data();
+    d.setBytes(w.getBytes());
+    return d;
+}
+
+function setMap(m, k, v){
+    var list = m.getMapList();
+    for(var i in list){
+        var item = list[i];
+        if(item.getName() == k){
+            item.setValue(v);
+            return
+        }
+    }
+    var entry = new proto.pb.DataEntry();
+    entry.setName(k);
+    entry.setValue(v);
+    list.push(entry);
+}
+
 function getPayload(payload) {
     var ret;
     if(payload != null){
@@ -59,55 +101,64 @@ function getPayload(payload) {
             var cm = new proto.pb.DataMap();
             var s = payload.code.data;
             if(s && s.length > 0 ){
-                cm.getMapMap().set("data", getString(s));
+                setMap(cm, "data", getString(s));
 
                 s = payload.code.abi;
                 if(s && s.length > 0){
-                    cm.getMapMap().set("abi", getString(s));
+                    setMap(cm, "abi", getString(s));
                 }
             }
-            ret.getMapMap().set("code", getMap(cm));
+            setMap(ret, "code", getMap(cm));
         }
         if(payload.contract != null){
             var cm = new proto.pb.DataMap();
             var account = payload.contract.account;
-            if(account && account.length > 0){
-                cm.getMapMap().set("account", getString(account));
+            if(account != null){
+                var am = get_account_info(account);
+                setMap(cm, "account", getMap(am));
             }
             var method = payload.contract.method;
             if(method && method.length > 0){
-                cm.getMapMap().set("method", getString(method));
+                setMap(cm, "method", getString(method));
             }
             var params = payload.contract.params;
             if(params && params.length > 0){
-                cm.getMapMap().set("params", getString(params));
+                setMap(cm, "params", getString(params));
             }
             var inputs = payload.contract.inputs;
             if(inputs && inputs.length > 0){
-                cm.getMapMap().set("inputs", getString(inputs));
+                setMap(cm, "inputs", getString(inputs));
             }
             var outputs = payload.contract.outputs;
             if(outputs && outputs.length > 0){
-                cm.getMapMap().set("outputs", getString(outputs));
+                setMap(cm, "outputs", getString(outputs));
             }
-            ret.getMapMap().set("contract", getMap(cm));
+            setMap(ret, "contract", getMap(cm));
         }
         if(payload.page != null){
             var cm = new proto.pb.DataMap();
             var s = payload.page.data;
             if(s && s.length > 0){
-                cm.getMapMap().set("data", getString(s));
+                setMap(cm, "data", getString(s));
 
                 var n = payload.page.name;
                 if(n && n.length > 0){
-                    cm.getMapMap().set("name", getString(n));
+                    setMap(cm, "name", getString(n));
                 }
             }
-            ret.getMapMap().set("page", getMap(cm));
+            setMap(ret, "page", getMap(cm));
         }
         if(payload.user != null){
             var cm = get_user_info(payload.user, true);
-            ret.getMapMap().set("user", getMap(cm));
+            setMap(ret, "user", getMap(cm));
+        }
+        if(payload.meta != null){
+            var cm = get_meta_info(payload.meta);
+            setMap(ret, "meta", getMap(cm));
+        }
+        if(payload.token != null){
+            var cm = get_token_info(payload.token);
+            setMap(ret, "token", getMap(cm));
         }
     }else{
         ret = null;
@@ -115,50 +166,147 @@ function getPayload(payload) {
     return ret;
 }
 
+function get_token_info(token) {
+    var cm = new proto.pb.DataMap();
+    var s = token.symbol;
+    if(s && s.length > 0){
+        setMap(cm, "symbol", getString(s));
+    }
+    var n = token.index;
+    if(n != null){
+        setMap(cm, "index", getInt64(n));
+    }
+    var items = token.items;
+    if(items){
+        var list = new proto.pb.DataList();
+        for(var i in items) {
+            var item = items[i];
+            var im = get_token_item(item);
+            list.getListList().push(getMap(im));
+        }
+        setMap(cm, "items", getList(list));
+    }
+    return cm;
+}
+
+function get_token_item(item) {
+    var cm = new proto.pb.DataMap();
+    var s = item.name;
+    if(s && s.length > 0){
+        setMap(cm, "name", getString(s));
+    }
+    s = item.value;
+    if(s && s.length > 0){
+        setMap(cm, "value", getString(s));
+    }
+    return cm;
+}
+
+function get_meta_info(meta) {
+    var cm = new proto.pb.DataMap();
+    var s = meta.symbol;
+    if(s && s.length > 0){
+        setMap(cm, "symbol", getString(s));
+    }
+    var n = meta.total;
+    if(n != null){
+        setMap(cm, "total", getInt64(n));
+    }
+    var items = meta.items;
+    if(items){
+        var list = new proto.pb.DataList();
+        for(var i in items) {
+            var item = items[i];
+            var im = get_meta_item(item);
+            list.getListList().push(getMap(im));
+        }
+        setMap(cm, "items", getList(list));
+    }
+    return cm;
+}
+
+function get_meta_item(item) {
+    var cm = new proto.pb.DataMap();
+    var s = item.name;
+    if(s && s.length > 0){
+        setMap(cm, "name", getString(s));
+    }
+    s = item.type;
+    if(s && s.length > 0){
+        setMap(cm, "type", getString(s));
+    }
+    var options = item.options;
+    if(options){
+        var list = new proto.pb.DataList();
+        for(var i in options) {
+            var o = options[i];
+            list.getListList().push(getString(o));
+        }
+        setMap(cm, "options", getList(list));
+    }
+    s = item.desc;
+    if(s && s.length > 0){
+        setMap(cm, "desc", getString(s));
+    }
+    return cm;
+}
+
 function get_user_info(user, has_data) {
     var cm = new proto.pb.DataMap();
     if(has_data){
         var s = user.data;
         if(s && s.length > 0){
-            cm.getMapMap().set("data", getString(s));
+            setMap(cm, "data", getString(s));
         }
     }else{
         var s = user.hash;
         if(s && s.length > 0){
-            cm.getMapMap().set("hash", getString(s));
+            setMap(cm, "hash", getString(s));
         }
     }
-    var a = user.account;
-    if(a && a.length > 0){
-        cm.getMapMap().set("account", getString(a));
+    var account = user.account;
+    if(account != null){
+        var am = get_account_info(account);
+        setMap(cm, "account", getMap(am));
     }
     var k = user.key;
     if(k && k.length > 0){
-        cm.getMapMap().set("key", getString(k));
+        setMap(cm, "key", getString(k));
     }
     var n = user.nonce;
     if(n && n.length > 0){
-        cm.getMapMap().set("nonce", getString(n));
+        setMap(cm, "nonce", getString(n));
+    }
+    return cm;
+}
+
+function get_account_info(info) {
+    var cm = new proto.pb.DataMap();
+    var data = info.data;
+    if(data && data.length > 0){
+        setMap(cm, "data", getString(data))
+    }
+    var code = info.code;
+    if(code && code.length > 0){
+        setMap(cm, "code", getString(code));
     }
     return cm;
 }
 
 function getTransaction(tx) {
-    var from = tx.from;
-    var secret = tx.secret;
+    var account = tx.account;
     var sequence = tx.sequence;
-    var to = tx.to;
+    var secret = tx.secret;
     var gas = tx.gas;
     var payload = getPayload(tx.payload);
     
     var m = new proto.pb.DataMap();
-    m.getMapMap().set("from", getString(from));
-    m.getMapMap().set("secret", getString(secret));
-    m.getMapMap().set("to", getString(to));
-    m.getMapMap().set("gas", getString(gas));
-    m.getMapMap().set("sequence", getString(sequence));
+    setMap(m, "account", getString(account));
+    setMap(m, "sequence", getString(sequence));
+    setMap(m, "secret", getString(secret));
+    setMap(m, "gas", getString(gas));
     if(payload != null){
-        m.getMapMap().set("payload", getMap(payload));
+        setMap(m, "payload", getMap(payload));
     }
 
     var bs = m.serializeBinary();
@@ -203,8 +351,8 @@ function getWasmGenerator() {
 }
 
 export default {
-    new: function(url) {
-        return new Client(url);
+    new: function(url, root) {
+        return new Client(url, root);
     },
     bytes_to_hex(bs){
         return bytesToHex(bs);
@@ -286,7 +434,10 @@ export default {
         var encrypted_nonce = encrypt(account.public, nonce);
         var encrypted_hex = encrypt_data(key, nonce, hex);
         return {
-            account: contract,
+            account: {
+                data:account.address,
+                code:contract
+            },
             key: encrypted_key,
             nonce: encrypted_nonce,
             data: encrypted_hex
@@ -306,10 +457,13 @@ export default {
         var ret = decode_user_info(hex);
         var list = ret.split(",");
         return {
-            account: list[0],
-            key: list[1],
-            nonce: list[2],
-            hash: list[3]
+            account: {
+                data:list[0],
+                code:list[1]
+            },
+            key: list[2],
+            nonce: list[3],
+            hash: list[4]
         };
     },
     encode_public_key(hex) {
@@ -322,7 +476,7 @@ export default {
 
         return decode_public_key(hex);
     },
-    transfer_user_data(account, peer_pk, user_info) {
+    transfer_user_data(account, contract, peer_pk, user_info) {
         getWasm();
         
         var key = decrypt(account.private, user_info.key);
@@ -332,7 +486,10 @@ export default {
         var encrypted_nonce = encrypt(peer_pk, nonce);
 
         var m = get_user_info({
-            account: account.address,
+            account: {
+                data:account.address,
+                code:contract
+            },
             key:encrypted_key,
             nonce:encrypted_nonce,
             hash:user_info.hash
