@@ -6,6 +6,9 @@ function Client(url, root) {
         id:0,
         url: url,
         root:root,
+        with: function(root) {
+            return new Client(this.url, root);
+        },
         post: function(data, callback) {
             data.id = this.id ++;
             if(this.root != null){
@@ -28,115 +31,163 @@ function Client(url, root) {
             });
         },
         block_number(callback) {
+            this.blockNumber(callback);
+        },
+        blockNumber(callback){
             this.post({
                 method:"blockNumber",
                 params:[]
             }, callback);
         },
         get_balance(address, callback) {
+            this.getBalance({
+                address
+            }, callback);
+        },
+        getBalance(p, callback){
             this.post({
                 method:"getBalance",
                 params:[
-                    {
-                        address
-                    }
+                    p
                 ]
             }, callback);
         },
         get_meta(symbol, callback) {
+            this.getMeta({
+                symbol
+            }, callback);
+        },
+        getMeta(p, callback){
             this.post({
                 method:"getMeta",
                 params:[
-                    {
-                        symbol
-                    }
+                    p
                 ]
             }, callback);
         },
         get_block_by_number(num, callback){
+            this.getBlockByNumber({
+                num
+            }, callback);
+        },
+        getBlockByNumber(p, callback){
             this.post({
                 method:"getBlockByNumber",
                 params:[
-                    {
-                        num
-                    }
+                    p
+                ]
+            }, callback);
+        },
+        get_transaction_by_hash(hash, callback){
+            this.getTransactionByHash({
+                hash
+            }, callback);
+        },
+        getTransactionByHash(p, callback){
+            this.post({
+                method:"getTransactionByHash",
+                params:[
+                    p
                 ]
             }, callback);
         },
         get_data(hash, format, callback) {
+            this.getData({
+                hash,
+                format
+            }, callback);
+        },
+        getData(p, callback){
             this.post({
                 method:"getData",
                 params:[
-                    {
-                        hash,
-                        format
-                    }
+                    p
                 ]
             }, callback);
         },
         get_user_data(address, account, callback){
+            this.getUserData({
+                address,
+                account
+            }, callback);
+        },
+        getUserData(p, callback){
             this.post({
                 method:"getUserData",
                 params:[
-                    {
-                        address,
-                        account
-                    }
+                    p
                 ]
             }, callback);
         },
         get_contract_data(from, to, format, callback){
+            this.getContractData({
+                from,
+                to,
+                format
+            }, callback);
+        },
+        getContractData(p, callback){
             this.post({
                 method:"getContractData",
                 params:[
-                    {
-                        from,
-                        to,
-                        format
-                    }
+                    p
                 ]
             }, callback);
         },
         get_account(address, callback) {
+            this.getAccount({
+                type: "AccountState", 
+                address: address
+            }, callback);
+        },
+        getAccount(p, callback){
             this.post({
                 method:"getStateByAddress",
                 params:[
-                    {
-                        type: "AccountState", 
-                        address: address
-                    }
+                    p
                 ]
             }, callback);
         },
         call_contract(data_address, code_address, method, params, callback){
+            this.callContract({
+                from: data_address, 
+                to: code_address,
+                method: method,
+                params: params
+            }, callback);
+        },
+        callContract(p, callback){
             this.post({
                 method:"callContract",
                 params:[
-                    {
-                        from: data_address, 
-                        to: code_address,
-                        method: method,
-                        params: params
-                    }
+                    p
                 ]
             }, callback);
         },
         get_transaction_count(address, callback) {
+            this.getTransactionCount({
+                address
+            }, callback);
+        },
+        getTransactionCount(p, callback){
             this.post({
                 method:"getTransactionCount",
                 params:[
-                    {
-                        address
-                    }
+                    p
                 ]
             }, callback);
         },
         send_raw_transaction(blob, callback) {
+            this.sendRawTransaction({
+                blob
+            }, callback);
+        },
+        sendRawTransaction(p, callback) {
             this.post({
                 method:"sendRawTransaction",
-                params:[ {
-                    blob
-                } ]
+                params:[ 
+                    p
+                ]
             }, callback);
         }
     };

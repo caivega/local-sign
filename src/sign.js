@@ -8,6 +8,7 @@ import Client from './client';
 
 import init, { 
     sign_transaction, 
+    verify_transaction,
     generate_account, 
     import_account,
     generate_key, 
@@ -345,6 +346,11 @@ function getWasmSigner() {
     return sign_transaction;
 }
 
+function getWasmVerifier() {
+    getWasm();
+    return verify_transaction;
+}
+
 function getWasmGenerator() {
     getWasm();
     return generate_account;
@@ -393,6 +399,11 @@ export default {
         var signer = getWasmSigner();
         var txBlob = getTransaction(tx);
         return signer(txBlob);
+    },
+    verify: function(txWithDataBlob) {
+        var verifier = getWasmVerifier();
+        var v = verifier(txWithDataBlob);
+        return v == "true";
     },
     load_file: function(f, callback) {
         var fr = new FileReader();
