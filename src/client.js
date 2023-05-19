@@ -39,6 +39,20 @@ function Client(url, root) {
                 params:[]
             }, callback);
         },
+        get_account(address, callback) {
+            this.getAccount({
+                type: "AccountState", 
+                address: address
+            }, callback);
+        },
+        getAccount(p, callback){
+            this.post({
+                method:"getStateByAddress",
+                params:[
+                    p
+                ]
+            }, callback);
+        },
         get_balance(address, callback) {
             this.getBalance({
                 address
@@ -60,6 +74,20 @@ function Client(url, root) {
         getMeta(p, callback){
             this.post({
                 method:"getMeta",
+                params:[
+                    p
+                ]
+            }, callback);
+        },
+        get_token(symbol, index, callback) {
+            this.getMeta({
+                symbol,
+                index
+            }, callback);
+        },
+        getToken(p, callback){
+            this.post({
+                method:"getToken",
                 params:[
                     p
                 ]
@@ -129,20 +157,6 @@ function Client(url, root) {
         getContractData(p, callback){
             this.post({
                 method:"getContractData",
-                params:[
-                    p
-                ]
-            }, callback);
-        },
-        get_account(address, callback) {
-            this.getAccount({
-                type: "AccountState", 
-                address: address
-            }, callback);
-        },
-        getAccount(p, callback){
-            this.post({
-                method:"getStateByAddress",
                 params:[
                     p
                 ]

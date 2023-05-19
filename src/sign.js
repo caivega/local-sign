@@ -94,6 +94,19 @@ function setMap(m, k, v){
     list.push(entry);
 }
 
+function get_param_item(item) {
+    var cm = new proto.pb.DataMap();
+    var s = item.type;
+    if(s && s.length > 0){
+        setMap(cm, "type", getString(s));
+    }
+    s = item.value;
+    if(s && s.length > 0){
+        setMap(cm, "value", getString(s));
+    }
+    return cm;
+}
+
 function getPayload(payload) {
     var ret;
     if(payload != null){
@@ -123,16 +136,32 @@ function getPayload(payload) {
                 setMap(cm, "method", getString(method));
             }
             var params = payload.contract.params;
-            if(params && params.length > 0){
-                setMap(cm, "params", getString(params));
+            if(params){
+                var list = new proto.pb.DataList();
+                for(var i in params) {
+                    var item = params[i];
+                    var im = get_param_item(item);
+                    list.getListList().push(getMap(im));
+                }
+                setMap(cm, "params", getList(list));
             }
             var inputs = payload.contract.inputs;
-            if(inputs && inputs.length > 0){
-                setMap(cm, "inputs", getString(inputs));
+            if(inputs){
+                var list = new proto.pb.DataList();
+                for(var i in inputs) {
+                    var item = inputs[i];
+                    list.getListList().push(getString(item));
+                }
+                setMap(cm, "inputs", getList(list));
             }
             var outputs = payload.contract.outputs;
-            if(outputs && outputs.length > 0){
-                setMap(cm, "outputs", getString(outputs));
+            if(outputs){
+                var list = new proto.pb.DataList();
+                for(var i in outputs) {
+                    var item = outputs[i];
+                    list.getListList().push(getString(item));
+                }
+                setMap(cm, "outputs", getList(list));
             }
             setMap(ret, "contract", getMap(cm));
         }
@@ -418,6 +447,11 @@ export default {
         };
         fr.readAsArrayBuffer(f);
     },
+    view_file: function(name, type, data) {
+        var blob = new Blob([data], {type: type});
+        var fileURL = URL.createObjectURL(blob);
+        window.open(fileURL);
+    },
     download_file: function(name, type, data) {
         var blob = new Blob([data], {type: type && "application/octet-stream"});
         const reader = new FileReader();
@@ -430,11 +464,6 @@ export default {
             a.click();
             document.body.removeChild(a);
         };
-    },
-    view_file: function(name, type, data) {
-        var blob = new Blob([data], {type: type});
-        var fileURL = URL.createObjectURL(blob);
-        window.open(fileURL);
     },
     encrypt_user_data(account, contract, hex) {
         getWasm();
