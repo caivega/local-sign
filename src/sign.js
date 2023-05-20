@@ -101,7 +101,7 @@ function get_param_item(item) {
         setMap(cm, "type", getString(s));
     }
     s = item.value;
-    if(s && s.length > 0){
+    if(s != null){
         setMap(cm, "value", getString(s));
     }
     return cm;
